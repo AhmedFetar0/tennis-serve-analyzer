@@ -1,0 +1,8 @@
+venv/
+data/
+runs/
+homography.npy
+__pycache__/
+*.pyc
+.DS_Store
+yolov8n.pt
