@@ -4,7 +4,7 @@ Estimates tennis serve speed from smartphone video, using a custom ball detector
 and court geometry.
 
 **Status:** working first pass on one clip. Speeds are rough estimates and have not
-been checked against a radar gun.
+been checked against a radar gun. This is still very much a work in progress lol.
 
 ## How it works
 
