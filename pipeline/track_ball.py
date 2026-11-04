@@ -31,7 +31,7 @@ Converting to m/s requires the 3D geometry work (camera intrinsics + court
 pose). This script is the trajectory front-end for that, not a speedometer.
 
 Usage:
-    python track_ball.py --video "TestRecs\\oncourt test 1\\240\\serve3.MOV" \
+    python pipeline/track_ball.py --video "TestRecs\\oncourt test 1\\240\\serve3.MOV" \
         --weights "runs\\detect\\train-6\\weights\\best.pt" \
         --out_dir .\\tracking\\serve3 --imgsz 1280 --conf 0.15
 """

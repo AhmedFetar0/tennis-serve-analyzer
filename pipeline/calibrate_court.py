@@ -19,11 +19,11 @@ on load, so the file cannot hold a matrix that disagrees with its points.
 
 Usage:
     # Click landmarks (s = skip one that isn't visible, u = undo, q = finish)
-    python calibrate_court.py --video "TestRecs\\oncourt test 1\\240\\serve3.MOV" `
+    python pipeline/calibrate_court.py --video "TestRecs\\oncourt test 1\\240\\serve3.MOV" `
         --frame 1014 --out tracking\\serve3\\court_f1014.json
 
     # Check an existing calibration: print residuals, draw the court on the frame
-    python calibrate_court.py --video "TestRecs\\oncourt test 1\\240\\serve3.MOV" `
+    python pipeline/calibrate_court.py --video "TestRecs\\oncourt test 1\\240\\serve3.MOV" `
         --check tracking\\serve3\\court_f1014.json --preview court_check.jpg
 """
 

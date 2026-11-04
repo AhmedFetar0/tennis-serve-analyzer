@@ -36,7 +36,7 @@ frame, and maps pixels back to it first. This assumes the camera mostly
 rotates; it does not recover large walking movement.
 
 Usage (PowerShell):
-    python estimate_speed.py --track tracking\\serve3\\track.csv `
+    python pipeline/estimate_speed.py --track tracking\\serve3\\track.csv `
         --calibration tracking\\serve3\\court_f1014.json `
         --camera handheld --video "TestRecs\\oncourt test 1\\240\\serve3.MOV" `
         --contact_frame 824 --bounce_frame 1012 --bounce_px 1043 603 `

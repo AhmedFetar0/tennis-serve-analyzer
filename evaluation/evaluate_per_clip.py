@@ -11,7 +11,7 @@ Usage:
          source="phase2_dataset\\images" imgsz=1280 conf=0.25 \
          save_txt=True save_conf=True project=runs\\detect name=eval_phase2
 
-  2. python evaluate_per_clip.py --gt_dir phase2_dataset\\labels \
+  2. python evaluation/evaluate_per_clip.py --gt_dir phase2_dataset\\labels \
          --pred_dir runs\\detect\\eval_phase2\\labels --iou_thresh 0.5
 """
 

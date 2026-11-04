@@ -5,7 +5,7 @@ import sys
 import os
 
 if len(sys.argv) < 2:
-    print("Usage: python inference.py <video_filename>")
+    print("Usage: python evaluation/inference.py <video_filename>")
     sys.exit(1)
 
 video_path_arg = sys.argv[1]

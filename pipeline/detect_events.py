@@ -22,7 +22,7 @@ BOUNCE (uses the video):
 Output is events.json, which estimate_speed.py reads with --events.
 
 Usage (PowerShell):
-    python detect_events.py --track tracking\\serve3_fixed\\track.csv `
+    python pipeline/detect_events.py --track tracking\\serve3_fixed\\track.csv `
         --video "TestRecs\\oncourt test 1\\240\\serve3.MOV" `
         --out tracking\\serve3_fixed\\events.json
 """

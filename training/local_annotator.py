@@ -24,7 +24,7 @@ Controls:
     q / Esc                save and quit
 
 Usage:
-    python local_annotator.py --dataset_dir ./phase2_dataset --class_id 0
+    python training/local_annotator.py --dataset_dir ./phase2_dataset --class_id 0
 """
 
 import argparse

@@ -12,7 +12,7 @@ score actually reflects performance on the case you're trying to fix,
 instead of only the easier angle.
 
 Usage:
-    python merge_dataset.py --phase2_dir ./phase2_dataset \
+    python training/merge_dataset.py --phase2_dir ./phase2_dataset \
         --dataset_root ./path/to/your/downloaded/dataset --valid_count 8
 """
 

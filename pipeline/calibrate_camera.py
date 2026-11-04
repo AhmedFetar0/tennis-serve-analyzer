@@ -21,7 +21,7 @@ IMPORTANT -- board geometry:
     downstream.
 
 Usage:
-    python calibrate_camera.py --video calib_240fps.MOV \
+    python pipeline/calibrate_camera.py --video calib_240fps.MOV \
         --cols 9 --rows 6 --square_mm 24.5 --out_dir .\\calibration
 """
 

@@ -18,7 +18,7 @@ Workflow this script implements:
      the frames most likely to contain a missed ball you'll need to box by hand.
 
 Usage:
-    python prelabel_clips.py --videos_dir ./raw_clips --weights ./best.pt \
+    python training/prelabel_clips.py --videos_dir ./raw_clips --weights ./best.pt \
         --output_dir ./phase2_dataset --fps 2 --conf 0.15
 
 Output layout:
