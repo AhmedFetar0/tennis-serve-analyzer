@@ -1,12 +1,13 @@
 from ultralytics import YOLO
 
-model = YOLO("yolov8n.pt")
+if __name__ == "__main__":
+    model = YOLO("yolov8n.pt")
 
-model.train(
-    data="data/Tennis Ball detection.v1i.yolov8/data.yaml",
-    epochs=2,
-    imgsz=640,
-    batch=8,
-    device="cpu",
-    fraction=0.05
-)
+    model.train(
+        data="data/data.yaml",
+        epochs=100,
+        imgsz=640,
+        batch=16,
+        device=0,
+        patience=20
+    )

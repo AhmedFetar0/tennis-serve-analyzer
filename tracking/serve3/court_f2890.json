@@ -1,0 +1,54 @@
+{
+ "video": "serve3.MOV",
+ "frame": 2890,
+ "image_size": [
+  1920,
+  1080
+ ],
+ "points": {
+  "near_left_singles": [
+   6.4,
+   969.4
+  ],
+  "near_center_mark": [
+   1001.2,
+   916.3
+  ],
+  "near_service_left": [
+   470.7,
+   753.3
+  ],
+  "near_T": [
+   994.7,
+   728.5
+  ],
+  "near_service_right": [
+   1524.4,
+   703.9
+  ],
+  "far_service_left": [
+   736.7,
+   630.2
+  ],
+  "far_service_right": [
+   1247.2,
+   606.7
+  ],
+  "far_left_doubles": [
+   716.9,
+   613.6
+  ],
+  "far_left_singles": [
+   784.6,
+   610.3
+  ],
+  "far_right_singles": [
+   1199.4,
+   589.7
+  ],
+  "far_right_doubles": [
+   1271.3,
+   586.5
+  ]
+ }
+}

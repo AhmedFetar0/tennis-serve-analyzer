@@ -1,0 +1,33 @@
+{
+  "fps": 239.69253763211273,
+  "serves": [
+    {
+      "contact_frame": 823,
+      "bounce": {
+        "frame": 1013,
+        "px": [
+          1042.8,
+          603.3
+        ],
+        "descent_points": 39,
+        "ascent_points": 46,
+        "source": "frame differencing, ball bottom"
+      },
+      "no_bounce_reason": null
+    },
+    {
+      "contact_frame": 2710,
+      "bounce": {
+        "frame": 2892,
+        "px": [
+          1218.6,
+          604.8
+        ],
+        "descent_points": 22,
+        "ascent_points": 41,
+        "source": "frame differencing, ball bottom"
+      },
+      "no_bounce_reason": null
+    }
+  ]
+}

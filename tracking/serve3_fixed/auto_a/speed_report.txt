@@ -1,0 +1,35 @@
+
+=== first serve: rough speed estimate ===
+
+AVERAGE FLIGHT SPEED (contact to bounce): 22.0 m/s = 79 km/h = 49 mph
+  1-sigma uncertainty: +/- 0.9 m/s (+/- 3 km/h)
+  This is NOT a radar-comparable serve speed.
+
+ESTIMATED LAUNCH SPEED (drag-corrected, model-based): 26.3 m/s = 95 km/h = 59 mph
+  1-sigma uncertainty: +/- 4 km/h, plus model error
+  Assumes quadratic drag, Cd = 0.55, no spin, no gravity.
+
+Measurement
+  distance:     17.41 m (straight line, 3D)
+  elapsed:      0.793 s (190 frames at 239.69 fps)
+  contact:      frame 823, court (3.59, 0.47) m, height 2.60 m
+                from landing foot (frame 880) + assumed height; track status 'updated'
+  bounce:       frame 1013, court (4.00, 17.68) m
+                from homography, manual pixel; track status 'stale'
+
+Assumptions
+  camera:       handheld
+  motion comp:  ORB homography to frame 1014 on 129 frames, min 1630 inliers
+  homography:   tracking\serve3\court_f1014.json (frame 1014, 11 landmarks,
+                3.79 px RMS, 0.152 m leave-one-out RMS)
+  event frames: auto-detected (frame differencing, ball bottom), +/- 1.5 frames each
+  excluded:     none (false detections, plots only)
+  contact pos:  +/- 0.5 m along the flight line
+  bounce pos:   +/- 0.48 m (0.228 m per pixel, 2.0 px)
+
+Caveats
+  * Rough estimate: planar court model, no camera pose, no lens correction.
+  * Not validated against radar. The uncertainty above covers the listed inputs,
+    not errors in the method itself.
+  * Contact height is assumed, not measured.
+  * Handheld footage: motion compensation assumes the camera mostly rotates.

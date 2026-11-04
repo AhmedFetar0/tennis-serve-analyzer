@@ -1,0 +1,18 @@
+{
+  "video": "serve3.MOV",
+  "frame": 1014,
+  "image_size": [1920, 1080],
+  "points": {
+    "near_left_singles": [96, 966],
+    "near_center_mark": [1066.5, 898.5],
+    "near_service_left": [537, 746],
+    "near_T": [1055, 710.5],
+    "near_service_right": [1594, 674],
+    "far_service_left": [795, 618],
+    "far_service_right": [1307, 582],
+    "far_left_doubles": [775, 602],
+    "far_left_singles": [842, 597],
+    "far_right_singles": [1258, 566],
+    "far_right_doubles": [1331, 561]
+  }
+}

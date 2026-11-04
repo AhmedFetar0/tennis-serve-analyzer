@@ -6,3 +6,23 @@ __pycache__/
 *.pyc
 .DS_Store
 yolov8n.pt
+
+# Footage shows identifiable people and is far over GitHub's 100 MB file limit.
+TestRecs/
+phase2_dataset/
+camera_Calibration/
+*.MOV
+*.mov
+*.mp4
+*.avi
+
+# Images that show the player. Use git add -f for one chosen on purpose.
+court_check.jpg
+my_court_check.jpg
+tracking/**/path_overlay.jpg
+
+# Model weights
+*.pt
+
+# Private project notes and session handoff
+PROJECT_DOCUMENTATION.md
