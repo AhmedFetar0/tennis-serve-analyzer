@@ -66,7 +66,7 @@ The ± values cover input errors only. Automatic contact and bounce frames were 
 | `pipeline/` | Tracking, calibration, event detection and speed estimation |
 | `training/` | Labeling tools, dataset merge and model training |
 | `evaluation/` | Detector checks and per-clip accuracy |
-| `legacy/` | Early homography demo on a stock photo, not used by the pipeline |
+| `legacy/` | Early homography demo, not used by the pipeline. Add your own `court.jpg` to run it |
 
 ## Usage
 
