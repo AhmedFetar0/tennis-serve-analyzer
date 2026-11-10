@@ -3,8 +3,10 @@
 Estimates tennis serve speed from smartphone video, using a custom ball detector
 and court geometry.
 
-**Status:** working first pass on one clip. Speeds are rough estimates and have not
-been checked against a radar gun. This is still very much a work in progress.
+![Tracked serve path with bounce point and court calibration points](assets/serve_overlay.jpg)
+
+*Second serve: tracked ball path (green), detected bounce (orange ×), court calibration
+points (red +). 90 ± 4 km/h average flight speed.*
 
 ## How it works
 
@@ -52,9 +54,10 @@ The ± values cover input errors only. Automatic contact and bounce frames were 
 
 ## Limitations
 
-- Not validated against radar.
-- Event detection was tuned on these same two serves, and found no serves in a second
-  clip where the server is far from the camera.
+**Status:** working end-to-end on one clip; not yet validated against radar.
+
+- Event detection was tuned on these same two serves, and doesn't yet generalize to a
+  second clip where the server is far from the camera.
 - Court landmarks and the ground point under contact are still marked by hand.
 - One camera cannot directly measure depth, so this gives average speed, not true speed
   off the racket.
@@ -77,11 +80,8 @@ weights are not included. Run commands from the repo root.
 python pipeline/track_ball.py --video clip.MOV --weights best.pt --out_dir out
 python pipeline/calibrate_court.py --video clip.MOV --frame 1014 --out out/court.json
 python pipeline/detect_events.py --track out/track.csv --video clip.MOV --out out/events.json
-python pipeline/estimate_speed.py --track out/track.csv --calibration out/court.json `
-    --camera tripod --video clip.MOV --events out/events.json --serve 0 `
-    --contact_ground_px X Y --out_dir out/serve0
+python pipeline/estimate_speed.py --track out/track.csv --calibration out/court.json --camera tripod --video clip.MOV --events out/events.json --serve 0 --contact_ground_px X Y --out_dir out/serve0
 ```
-
 
 ## Next
 
