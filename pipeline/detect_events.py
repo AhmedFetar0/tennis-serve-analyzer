@@ -51,6 +51,11 @@ MIN_JUMP_RATIO = 0.5        # relative to fall speed: a far ball moves few pixel
 MIN_TOSS_PX = 40            # height of the toss arc on each side of its peak
 MAX_TOSS_RMS_PX = 6.0       # parabola fit limit; handheld shake adds a few px
 TOSS_COVERAGE = 0.6         # fraction of toss frames needing a detection
+# A far-away server's toss is only a few pixels wide and the detector sees it
+# in fits and starts. With this lower coverage a contact is still reported,
+# but marked "sparse toss": believable only if the flight that follows it
+# then fits a real serve (fit_trajectory.py checks exactly that).
+SPARSE_TOSS_COVERAGE = 0.25
 
 BLOB_THRESHOLD = 12         # grey levels brighter than both neighbours
 DIFF_GAP_FRAMES = 6
@@ -96,7 +101,7 @@ def velocity_jumps(det, half_window):
     return jumps
 
 
-def find_apex(det, frame, fps):
+def find_apex(det, frame, fps, coverage=TOSS_COVERAGE):
     """Frame of the toss peak before `frame`, or None if there was no real toss.
 
     Image y grows downward, so the peak is the smallest y. It must come well
@@ -104,7 +109,7 @@ def find_apex(det, frame, fps):
     """
     frames = det[:, 0]
     window = (frames >= frame - MAX_FALL_S * fps) & (frames < frame)
-    if window.sum() < TOSS_COVERAGE * MIN_FALL_S * fps:
+    if window.sum() < coverage * MIN_FALL_S * fps:
         return None
     apex_i = np.where(window)[0][np.argmin(det[window, 2])]
     apex, apex_y = det[apex_i, 0], det[apex_i, 2]
@@ -119,16 +124,19 @@ def find_apex(det, frame, fps):
     return int(apex)
 
 
-def is_contact(det, frame, vy_before, vy_after, half_window, fps):
-    """True if a velocity jump at `frame` follows a toss and is not a ground bounce."""
+def is_contact(det, frame, vy_before, vy_after, half_window, fps, coverage=TOSS_COVERAGE):
+    """True if a velocity jump at `frame` follows a toss and is not a ground bounce.
+
+    coverage is the fraction of toss frames that must have a detection.
+    """
     frames = det[:, 0]
-    apex = find_apex(det, frame, fps)
+    apex = find_apex(det, frame, fps, coverage)
     if apex is None or vy_before <= 0 or vy_after < -0.25 * abs(vy_before):
         return False                 # no toss, not falling, or a ground bounce
 
     fit_end = frame - half_window // 2
     toss = (frames >= apex) & (frames < fit_end)
-    if toss.sum() < TOSS_COVERAGE * (fit_end - apex):
+    if toss.sum() < coverage * (fit_end - apex):
         return False
     t = frames[toss] - fit_end
     fit_y = np.polyfit(t, det[toss, 2], 2)
@@ -136,7 +144,7 @@ def is_contact(det, frame, vy_before, vy_after, half_window, fps):
     return rms <= MAX_TOSS_RMS_PX and fit_y[0] > 0
 
 
-def find_contacts(det, fps):
+def find_contacts(det, fps, coverage=TOSS_COVERAGE):
     half_window = max(3, round(JUMP_WINDOW_S * fps))
     jumps = sorted(velocity_jumps(det, half_window), key=lambda j: -j[1])
 
@@ -151,10 +159,25 @@ def find_contacts(det, fps):
         seen.append(frame)
         # Jumps are visited largest first, so the first in a neighbourhood is
         # its peak, which is the contact frame.
-        if (is_contact(det, frame, vy_before, vy_after, half_window, fps)
+        if (is_contact(det, frame, vy_before, vy_after, half_window, fps, coverage)
                 and all(abs(frame - c) > MIN_FALL_S * fps for c in contacts)):
             contacts.append(frame)
     return sorted(contacts)
+
+
+def find_contacts_with_evidence(det, fps):
+    """Contacts as (frame, evidence) pairs, in frame order.
+
+    evidence is "clean toss" when the toss was seen well enough to stand on
+    its own, or "sparse toss" when it was only partly seen. A sparse-toss
+    contact that coincides with a clean one is dropped.
+    """
+    clean = find_contacts(det, fps)
+    found = [(frame, "clean toss") for frame in clean]
+    for frame in find_contacts(det, fps, SPARSE_TOSS_COVERAGE):
+        if all(abs(frame - c) > MIN_FALL_S * fps for c in clean):
+            found.append((frame, "sparse toss"))
+    return sorted(found)
 
 
 def blob_candidates(video, ref_frame, first, last, roi, seed_frames):
@@ -370,13 +393,14 @@ def main():
         raise SystemExit(f"Could not read a frame rate from {args.video}")
 
     det = load_detections(args.track)
-    contacts = find_contacts(det, fps)
+    contacts = find_contacts_with_evidence(det, fps)
     print(f"{len(contacts)} contact(s) found: {contacts}")
 
     serves = []
-    for contact in contacts:
+    for contact, evidence in contacts:
         bounce, reason = find_bounce(det, contact, args.video, fps)
-        serves.append({"contact_frame": contact, "bounce": bounce, "no_bounce_reason": reason})
+        serves.append({"contact_frame": contact, "contact_evidence": evidence,
+                       "bounce": bounce, "no_bounce_reason": reason})
         if bounce:
             print(f"  contact {contact}: bounce at frame {bounce['frame']}, pixel "
                   f"{bounce['px']} ({bounce['descent_points']} descent, "

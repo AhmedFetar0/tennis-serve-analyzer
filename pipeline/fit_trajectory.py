@@ -629,7 +629,7 @@ def write_views_plot(path_png, title, summary, path, lifted, inliers, anchored):
         for spine in ax.spines.values():
             spine.set_visible(False)
     side.set_title(f"{title}: fitted 3D flight (side view above, top view below, "
-                   "both to scale)", color=INK, fontsize=11)
+                   "both to scale)", color=INK, fontsize=11, pad=30)
     fig.savefig(path_png, bbox_inches="tight")
     plt.close(fig)
 
@@ -711,8 +711,10 @@ def build_parser():
     return p
 
 
-def main():
-    args = build_parser().parse_args()
+def main(argv=None):
+    """Run one fit. argv lets run_pipeline.py call this exactly as the command
+    line would. Returns the results that were written to trajectory.json."""
+    args = build_parser().parse_args(argv)
     contact_frame, bounce_frame, bounce_px, bounce_is_bottom, event_source = \
         load_events(args)
     if args.no_anchor:
@@ -804,7 +806,7 @@ def main():
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     (args.out_dir / "trajectory_report.txt").write_text(report, encoding="utf-8")
-    (args.out_dir / "trajectory.json").write_text(json.dumps({
+    results = {
         "label": args.label, "fps": fps, "contact_frame": contact_frame,
         "bounce_frame": bounce_frame, "anchored": anchored,
         "parameters": dict(zip(PARAM_NAMES, map(float, fit.params))),
@@ -819,7 +821,9 @@ def main():
         # One row per frame from contact to bounce: time, position, velocity.
         "path": [[round(float(t), 5)] + [round(float(v), 4) for v in row]
                  for t, row in zip(times, path)],
-    }, indent=1), encoding="utf-8")
+    }
+    (args.out_dir / "trajectory.json").write_text(json.dumps(results, indent=1),
+                                                  encoding="utf-8")
 
     lifted = lift_detections(pose, obs, path, times)
     plot_path = args.out_dir / "trajectory_views.png"
@@ -830,6 +834,7 @@ def main():
         write_overlay(overlay_path, args.video, calib, pose, obs, fit, path, summary,
                       anchored)
         print(f"Image overlay: {overlay_path}")
+    return results
 
 
 def build_report(args, calib, pose, obs, fit, summary, sigma, sigma_fit, sigma_mc,
@@ -863,7 +868,7 @@ def build_report(args, calib, pose, obs, fit, summary, sigma, sigma_fit, sigma_m
         f"  height:                {metres('contact_height_m')}",
         f"  position:              x = {metres('contact_x_m')} across, "
         f"y = {metres('contact_y_m')} down court",
-        f"                         (y = 0 is the baseline; positive is inside the court)",
+        f"                         (y = 0 is the near baseline, y = {COURT_L} the far one)",
         f"  launch angle:          {s['launch_elevation_deg']:+.1f} +/- "
         f"{sigma['launch_elevation_deg']:.1f} deg from horizontal (+ is upward)",
         "",
