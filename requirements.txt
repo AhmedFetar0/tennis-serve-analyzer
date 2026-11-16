@@ -1,0 +1,12 @@
+# Core pipeline
+numpy
+opencv-python
+scipy
+matplotlib
+
+# Ball detector (pulls in PyTorch; install the CUDA build of torch first if
+# you want GPU inference: https://pytorch.org/get-started/locally/)
+ultralytics
+
+# Tests
+pytest

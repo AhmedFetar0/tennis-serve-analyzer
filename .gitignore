@@ -20,9 +20,16 @@ camera_Calibration/
 court_check.jpg
 my_court_check.jpg
 tracking/**/path_overlay.jpg
+tracking/**/trajectory_overlay.jpg
+tracking/**/court_preview.jpg
+tracking/**/tracked.mp4
+tracking/**/pose_*.jpg
 
 # Model weights
 *.pt
 
 # Private project notes and session handoff
 PROJECT_DOCUMENTATION.md
+
+# Test and tool caches
+.pytest_cache/

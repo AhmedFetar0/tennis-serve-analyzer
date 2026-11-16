@@ -61,6 +61,21 @@ COURT_LANDMARKS = {
     "far_right_doubles": (SINGLES_W + DOUBLES_MARGIN, COURT_L),
 }
 
+# Crossings of court lines that are real points on the court but cannot be
+# clicked, because one of the two lines is not painted that far: the service
+# lines stop at the singles sidelines, and the centre line stops at the
+# service lines. detect_court.py fits whole lines, so it can extend them and
+# use these crossings too. They are kept apart so that the click tool does not
+# prompt for them.
+VIRTUAL_LANDMARKS = {
+    "near_service_left_doubles": (-DOUBLES_MARGIN, SERVICE_D),
+    "near_service_right_doubles": (SINGLES_W + DOUBLES_MARGIN, SERVICE_D),
+    "far_service_left_doubles": (-DOUBLES_MARGIN, FAR_SERVICE_Y),
+    "far_service_right_doubles": (SINGLES_W + DOUBLES_MARGIN, FAR_SERVICE_Y),
+    "far_center_mark": (CENTRE_X, COURT_L),
+}
+ALL_LANDMARKS = {**COURT_LANDMARKS, **VIRTUAL_LANDMARKS}
+
 # Court markings as world-coordinate segments, shared with the plots.
 COURT_LINES = [
     ((-DOUBLES_MARGIN, 0), (SINGLES_W + DOUBLES_MARGIN, 0)),
@@ -118,6 +133,22 @@ def _apply(H, pts):
     return cv2.perspectiveTransform(np.float64(pts).reshape(-1, 1, 2), H).reshape(-1, 2)
 
 
+def leave_one_out_rms(image_pts, world_pts):
+    """Each landmark predicted by a homography that never saw it, in metres.
+
+    An honest measure of accuracy, where the fit residual is flattered by
+    the fit: a homography through exactly 4 points has zero residual however
+    wrong the points are.
+    """
+    image_pts, world_pts = np.float64(image_pts), np.float64(world_pts)
+    errors = []
+    for i in range(len(image_pts)):
+        keep = np.arange(len(image_pts)) != i
+        pred = _apply(_solve(image_pts[keep], world_pts[keep]), image_pts[i])[0]
+        errors.append(np.linalg.norm(pred - world_pts[i]))
+    return float(np.sqrt(np.mean(np.square(errors))))
+
+
 def load_calibration(path: Path) -> CourtCalibration:
     if not path.is_file():
         raise SystemExit(
@@ -126,7 +157,7 @@ def load_calibration(path: Path) -> CourtCalibration:
             "from calibrate.py will not work: it was solved on court.jpg.")
     data = json.loads(path.read_text())
 
-    unknown = set(data["points"]) - set(COURT_LANDMARKS)
+    unknown = set(data["points"]) - set(ALL_LANDMARKS)
     if unknown:
         raise SystemExit(f"{path}: unknown landmark(s): {sorted(unknown)}")
     if len(data["points"]) < MIN_POINTS:
@@ -135,20 +166,13 @@ def load_calibration(path: Path) -> CourtCalibration:
 
     names = list(data["points"])
     image_pts = np.float64([data["points"][n] for n in names])
-    world_pts = np.float64([COURT_LANDMARKS[n] for n in names])
+    world_pts = np.float64([ALL_LANDMARKS[n] for n in names])
 
     H = _solve(image_pts, world_pts)
     reproj = _apply(np.linalg.inv(H), world_pts)
     rms_px = float(np.sqrt(((reproj - image_pts) ** 2).sum(axis=1).mean()))
 
-    # Each landmark predicted by a homography that never saw it: an honest
-    # measure of accuracy, where the fit residual is flattered by the fit.
-    loo = []
-    for i in range(len(names)):
-        keep = np.arange(len(names)) != i
-        pred = _apply(_solve(image_pts[keep], world_pts[keep]), image_pts[i])[0]
-        loo.append(np.linalg.norm(pred - world_pts[i]))
-    loo_rms_m = float(np.sqrt(np.mean(np.square(loo))))
+    loo_rms_m = leave_one_out_rms(image_pts, world_pts)
 
     w = np.c_[image_pts, np.ones(len(names))] @ H[2]
     return CourtCalibration(path, int(data["frame"]), tuple(data["image_size"]),

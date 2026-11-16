@@ -198,6 +198,63 @@ def estimate_camera_motion(video: Path, ref_frame: int, frames):
     return motion
 
 
+def stabilisation_residual(video: Path, ref_frame: int, motion, frames, samples=8):
+    """How well the camera-motion compensation worked, measured directly.
+
+    The worry with handheld footage is that leftover camera drift would be
+    mistaken for ball movement. This checks it on things that cannot move:
+    a few hundred high-contrast background points (line corners, fence
+    posts, tree edges). Each is located in the reference frame and again in
+    a sample of flight frames, by optical flow.
+
+        drift     how far those points moved in the raw frames. This is the
+                  camera shake that had to be removed.
+        residual  how far they still appear to move AFTER each frame is
+                  warped back onto the reference. Ideal is zero; what is
+                  left is the real error added to every ball position.
+
+    The 90th percentile is reported with the median because a few points
+    sit on the player or on swaying branches and genuinely move.
+
+    Returns a dict, or None if too few points could be followed.
+    """
+    frames = sorted(set(int(f) for f in frames if f != ref_frame and f in motion))
+    if not frames:
+        return None
+    chosen = [frames[i] for i in
+              np.unique(np.linspace(0, len(frames) - 1, samples).astype(int))]
+
+    def grey(index):
+        return cv2.cvtColor(read_frame(video, index), cv2.COLOR_BGR2GRAY)
+
+    ref = grey(ref_frame)
+    points = cv2.goodFeaturesToTrack(ref, maxCorners=400, qualityLevel=0.01,
+                                     minDistance=25)
+    if points is None or len(points) < 30:
+        return None
+
+    drift, residual = [], []
+    for f in chosen:
+        image = grey(f)
+        warped = cv2.warpPerspective(image, motion[f][0], ref.shape[::-1])
+        for target, store in ((image, drift), (warped, residual)):
+            # Lucas-Kanade optical flow: finds where each small patch of the
+            # reference went in the target image, to sub-pixel precision.
+            moved, ok, _ = cv2.calcOpticalFlowPyrLK(ref, target, points, None,
+                                                    winSize=(21, 21), maxLevel=3)
+            ok = ok.ravel() == 1
+            if ok.sum() >= 30:
+                store.append(np.linalg.norm((moved - points)[ok], axis=2).ravel())
+    if not drift or not residual:
+        return None
+    drift, residual = np.concatenate(drift), np.concatenate(residual)
+    return {"frames_checked": len(chosen), "points": int(len(points)),
+            "drift_median_px": float(np.median(drift)),
+            "drift_max_px": float(np.percentile(drift, 90)),
+            "residual_median_px": float(np.median(residual)),
+            "residual_p90_px": float(np.percentile(residual, 90))}
+
+
 def to_reference(px, frame, motion):
     """Map a pixel in `frame` into the calibration frame's pixel coordinates."""
     if motion is None:
