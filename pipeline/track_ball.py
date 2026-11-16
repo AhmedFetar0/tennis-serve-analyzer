@@ -43,11 +43,6 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-try:
-    from ultralytics import YOLO
-except ImportError:
-    raise SystemExit("Install deps first: pip install ultralytics opencv-python")
-
 
 MIN_STREAK_TO_COAST = 5
 
@@ -158,6 +153,14 @@ class BallKalman:
 def detect_sequence(video_path: Path, weights: Path, imgsz: int, conf: float):
     """Run the detector on every frame. Returns (fps, size, detections) where
     detections[i] is a list of (cx, cy, confidence) for frame i."""
+    # Imported here, not at the top of the file: loading ultralytics pulls in
+    # PyTorch, which takes several seconds. The Kalman filter below has no
+    # need of it, and the tests import this file just for the filter.
+    try:
+        from ultralytics import YOLO
+    except ImportError:
+        raise SystemExit("Install deps first: pip install -r requirements.txt")
+
     model = YOLO(str(weights))
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
