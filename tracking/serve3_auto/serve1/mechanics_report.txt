@@ -1,0 +1,35 @@
+=== Serve 2: serve mechanics (first pass) ===
+
+Legs
+  hips drop while loading:      0.11 m
+  deepest point of the load:    0.25 s before contact
+  hips rise, stance to contact: 0.24 m (jump plus legs straightening)
+  feet off ground at contact:   between 0.08 m and 0.30 m (see below)
+
+Reach
+  ball struck at:               2.58 m (from the trajectory fit)
+  hitting wrist at contact:     2.04 m (right hand)
+  shoulders at contact:         1.49 m
+
+Toss
+  peak height:                  3.68 m
+  ball falls before contact:    1.09 m
+  peak to contact:              0.47 s
+
+Check: wrist to ball at contact = 0.55 m
+  PASSED: consistent with a racket in the hand
+
+How these were measured
+  Joints from a pose model, placed on a vertical plane facing the camera.
+  The plane starts where the server stands before the toss (6.1 m from the
+  camera, from their feet on the court) and moves steadily to the fitted
+  contact point (7.1 m) by the moment of contact.
+  The player is 450 px tall in the frame. Joints were found in 100%
+  of the frames analysed.
+  Feet during the stance window moved 0.08 m.
+  The feet-off-ground figure is a range because the feet are far below the
+  camera, which makes their height sensitive to how far away they are. The
+  upper value assumes the feet are still at the stance distance, the lower
+  that they are level with the ball. They are somewhere between. The hips
+  are much less affected.
+  Not validated against any other measurement.

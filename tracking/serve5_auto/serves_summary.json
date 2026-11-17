@@ -1,0 +1,44 @@
+[
+ {
+  "serve": 1,
+  "contact_frame": 203,
+  "contact_evidence": "clean toss",
+  "calibration": "tracking\\serve5_auto\\court_serve0.json",
+  "summary": {
+   "launch_speed_ms": 32.32732784371639,
+   "contact_x_m": 4.024915411808993,
+   "contact_y_m": 23.24621768297728,
+   "contact_height_m": 2.483207369763261,
+   "launch_elevation_deg": -2.927221366821937,
+   "flight_time_s": 0.604639585743141,
+   "landing_x_m": 3.134671336925978,
+   "landing_y_m": 6.833149730912884,
+   "landing_speed_ms": 23.909988018954547,
+   "average_speed_ms": 27.485358122626927,
+   "cl_side": -0.12661489624569866,
+   "cl_up": 0.0,
+   "net_clearance_m": 0.21674317645725227,
+   "speed_at_net_ms": 26.064580830702795,
+   "max_curve_m": 0.16044334919111722
+  },
+  "sigma": {
+   "launch_speed_ms": 9.573077235789835,
+   "contact_x_m": 0.7482079590226519,
+   "contact_y_m": 5.415310180867171,
+   "contact_height_m": 0.17797199423141125,
+   "launch_elevation_deg": 0.22473715127978836,
+   "flight_time_s": 0.03269041708100242,
+   "landing_x_m": 0.43209210985577323,
+   "landing_y_m": 2.4357688518960314,
+   "landing_speed_ms": 4.873574058712408,
+   "average_speed_ms": 6.820923286749965,
+   "cl_side": 0.03216698700358626,
+   "cl_up": 0.04,
+   "net_clearance_m": 0.5343043215328966,
+   "speed_at_net_ms": 4.112643673254056,
+   "max_curve_m": 0.012955637701874745
+  },
+  "anchored": false,
+  "service_line_margin_m": 1.3481497309128834
+ }
+]

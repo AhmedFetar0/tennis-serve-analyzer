@@ -1,0 +1,61 @@
+=== Serve 1: 3D trajectory fit ===
+
+LAUNCH SPEED (off the racket): 95 +/- 7 km/h (26.4 m/s, 59 mph)
+  This is the figure a radar gun reports. Not yet validated against one.
+
+  speed at the net:      79 +/- 3 km/h (22.0 m/s, 49 mph)
+  speed at the bounce:   71 +/- 3 km/h (19.8 m/s, 44 mph)
+  average over flight:   81 +/- 4 km/h (22.5 m/s, 50 mph)
+
+Contact
+  height:                2.46 +/- 0.04 m
+  position:              x = 4.03 +/- 0.16 m across, y = 21.50 +/- 1.01 m down court
+                         (y = 0 is the near baseline, y = 23.77 the far one)
+  launch angle:          -0.6 +/- 0.1 deg from horizontal (+ is upward)
+
+Flight
+  time to bounce:        0.747 s
+  net clearance:         0.66 +/- 0.07 m
+  bounce:                x = 1.53 +/- 0.04 m, y = 5.10 +/- 0.23 m
+                         0.39 m BEYOND the service line, 2.58 m from the centre line
+  sideways curve:        0.28 m to the right of a straight line
+
+Spin (as force coefficients; see ball_physics.py)
+  sideways  cl_side:     -0.213 +/- 0.014   (- curves left, + curves right; includes any crosswind)
+  vertical  cl_up:       +0.035 +/- 0.016   (- is topspin, + is backspin)
+  equivalent spin:       roughly 2857 rpm if it is all spin and no wind (indicative only)
+
+Fit quality
+  detections:            169 used of 177 (frames 833-1009)
+  rejected as outliers:  [909, 928, 942, 947, 964, 968, 987, 1000]
+  residual:              median 1.34 px, 95% under 3.21 px
+  pixel noise used:      0.95 px per axis
+
+Uncertainty of the launch speed (1-sigma)
+  from pixel noise:      +/- 3.3 km/h
+  from the inputs:       +/- 6.2 km/h (100 Monte Carlo repeats: landmarks, image centre, bounce, drag)
+
+Handheld check (static background points, 8 flight frames)
+  camera drift during the flight:  median 49.4 px, up to 68.6 px
+  left after compensation:         median 1.32 px, 90% under 7.31 px
+  The second line is the error handheld filming adds to each ball position.
+
+Camera (solved from the court landmarks)
+  focal length:      1518 px  (+/- 7 px, horizontal field of view 64.6 deg)
+  camera position:   x = 0.26 m across, y = -2.36 m down court, 1.59 m above the court
+  tilt:              2.9 deg below horizontal
+  landmark error:    2.80 px RMS
+
+Inputs
+  calibration:           tracking\serve4_auto\court_serve0.json (13 landmarks)
+  events:                auto-detected (track, box centre)
+  contact / bounce frame: 831 / 1010, 239.69 fps
+  motion compensation:   ORB homography to frame 1022, min 1049 inliers
+  drag coefficient:      0.55 +/- 0.05 (assumed)
+
+Caveats
+  * Not validated against radar.
+  * The uncertainty covers the listed inputs and pixel noise. It does not
+    cover a wrong model: gusting wind, or spin that changes in flight.
+  * Contact position is the fitted flight run back to the contact frame,
+    so it inherits that frame's +/- 1 frame (about 0.1 m along the path).

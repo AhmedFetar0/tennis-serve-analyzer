@@ -1,0 +1,45 @@
+[
+ {
+  "serve": 1,
+  "contact_frame": 831,
+  "contact_evidence": "sparse toss",
+  "calibration": "tracking\\serve4_auto\\court_serve0.json",
+  "summary": {
+   "launch_speed_ms": 26.415925309490994,
+   "contact_x_m": 4.0285824671022405,
+   "contact_y_m": 21.502319551475818,
+   "contact_height_m": 2.4647613911447768,
+   "launch_elevation_deg": -0.5999223286585759,
+   "flight_time_s": 0.7467936337625178,
+   "landing_x_m": 1.5305827196278228,
+   "landing_y_m": 5.0981985311234075,
+   "landing_speed_ms": 19.813035462955433,
+   "average_speed_ms": 22.459431204630526,
+   "cl_side": -0.21281007945918984,
+   "cl_up": 0.035254669957178075,
+   "net_clearance_m": 0.6634116165318498,
+   "speed_at_net_ms": 21.990190264746133,
+   "max_curve_m": 0.2753675893968689
+  },
+  "sigma": {
+   "launch_speed_ms": 1.944643878992809,
+   "contact_x_m": 0.16133165014990267,
+   "contact_y_m": 1.0105214703503251,
+   "contact_height_m": 0.042740457856174405,
+   "launch_elevation_deg": 0.13638380945462203,
+   "flight_time_s": 0.004084607151985653,
+   "landing_x_m": 0.03626094743472062,
+   "landing_y_m": 0.22914302254617255,
+   "landing_speed_ms": 0.7360561809104746,
+   "average_speed_ms": 1.1896586028620333,
+   "cl_side": 0.014467648927963888,
+   "cl_up": 0.015695543190677144,
+   "net_clearance_m": 0.07367988841996126,
+   "speed_at_net_ms": 0.892112146044006,
+   "max_curve_m": 0.00890262379023915
+  },
+  "anchored": true,
+  "service_line_margin_m": -0.38680146887659284,
+  "mechanics": "No mechanics: the server's hips were found in only 0% of frames."
+ }
+]

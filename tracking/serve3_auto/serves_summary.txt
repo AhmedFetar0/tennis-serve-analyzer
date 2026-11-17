@@ -1,0 +1,7 @@
+Serve  Contact  Launch speed       Contact ht  Net clearance  Landing                     Notes
+-----------------------------------------------------------------------------------------------
+1          823    94 +/- 2   km/h   2.60 m      0.69 m         0.27 m inside service line  
+2         2710   106 +/- 3   km/h   2.58 m      0.62 m         0.54 m BEYOND service line  
+
+Serve 1 mechanics: written to tracking\serve3_auto\serve0\mechanics_report.txt
+Serve 2 mechanics: written to tracking\serve3_auto\serve1\mechanics_report.txt

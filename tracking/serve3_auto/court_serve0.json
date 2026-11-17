@@ -1,0 +1,79 @@
+{
+  "video": "serve3.MOV",
+  "frame": 1037,
+  "image_size": [
+    1920,
+    1080
+  ],
+  "source": "automatic (detect_court.py)",
+  "points": {
+    "near_left_singles": [
+      117.94,
+      949.83
+    ],
+    "near_center_mark": [
+      1064.76,
+      895.39
+    ],
+    "near_service_left": [
+      540.65,
+      742.36
+    ],
+    "near_T": [
+      1057.11,
+      707.44
+    ],
+    "near_service_right": [
+      1597.38,
+      670.91
+    ],
+    "far_service_left": [
+      798.77,
+      615.68
+    ],
+    "far_T": [
+      1052.61,
+      597.1
+    ],
+    "far_service_right": [
+      1307.72,
+      578.43
+    ],
+    "far_left_doubles": [
+      778.3,
+      598.85
+    ],
+    "far_left_singles": [
+      842.79,
+      594.08
+    ],
+    "far_right_singles": [
+      1260.06,
+      563.21
+    ],
+    "far_right_doubles": [
+      1334.84,
+      557.68
+    ],
+    "near_service_left_doubles": [
+      373.81,
+      753.64
+    ],
+    "near_service_right_doubles": [
+      1796.63,
+      657.44
+    ],
+    "far_service_left_doubles": [
+      719.07,
+      621.52
+    ],
+    "far_service_right_doubles": [
+      1399.71,
+      571.69
+    ],
+    "far_center_mark": [
+      1051.86,
+      578.61
+    ]
+  }
+}

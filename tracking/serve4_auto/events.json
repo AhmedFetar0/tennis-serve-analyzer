@@ -1,0 +1,20 @@
+{
+  "fps": 239.69138448349764,
+  "serves": [
+    {
+      "contact_frame": 831,
+      "contact_evidence": "sparse toss",
+      "bounce": {
+        "frame": 1010,
+        "px": [
+          879.9,
+          763.4
+        ],
+        "descent_points": 59,
+        "ascent_points": 59,
+        "source": "track, box centre"
+      },
+      "no_bounce_reason": null
+    }
+  ]
+}
