@@ -19,7 +19,17 @@ BOUNCE (uses the video):
     If either line lacks evidence, the serve reports NO bounce. It does not fall
     back to a guess, and estimate_speed.py gives no speed for that serve.
 
-Output is events.json, which estimate_speed.py reads with --events.
+Viewing direction:
+    Neither search assumes where the camera stands. Limits that depend on how
+    fast the ball crosses the image (the search box, the tolerances, what a
+    rebound may look like) scale with the ball's own measured image speed.
+    From behind, where the ball barely moves sideways, they reduce to the
+    fixed values the search was first written with. tests/
+    test_end_to_end_tripod.py runs the whole chain on rendered clips from
+    behind and from the side.
+
+Output is events.json, which estimate_speed.py and fit_trajectory.py read
+with --events.
 
 Usage (PowerShell):
     python pipeline/detect_events.py --track tracking\\serve3_fixed\\track.csv `
@@ -68,7 +78,11 @@ MAX_DESCENT_GAP_S = 0.10
 TRAILING_WINDOW_FRAMES = 8
 TRAILING_MIN_POINTS = 3
 MAX_STEP_RATIO = 6          # px/frame step, against the flight's median step
-ASCENT_SEARCH_PX = 60       # how far across the image an ascent may be
+ASCENT_SEARCH_PX = 60       # how far across the image an ascent may be, beyond
+                            # where the ball's own sideways travel would take it
+ROI_LOOKAHEAD_S = 0.5       # the search box follows the ball's travel this far
+REBOUND_KEEPS_SIDEWAYS = 0.7   # a bounce keeps roughly this much sideways speed
+ASCENT_SEARCH_FRAMES = 40   # how long after the descent an ascent may start
 MEET_BEFORE_FRAMES = 6      # the bounce lies this close to the last descent point
 MEET_AFTER_FRAMES = 25
 MEET_TOLERANCE_PX = 8       # ascent and descent must meet this closely in x
@@ -86,7 +100,8 @@ def _slope(frames, values):
 
 
 def velocity_jumps(det, half_window):
-    """(frame, jump, vy_before, vy_after) wherever both sides have enough data."""
+    """(frame, jump, vy_before, vy_after, speed_before) wherever both sides
+    have enough data. Velocities are in pixels per frame."""
     frames = det[:, 0]
     need = max(3, int(0.7 * half_window))
     jumps = []
@@ -97,7 +112,8 @@ def velocity_jumps(det, half_window):
             continue
         vb = [_slope(frames[before], det[before, i]) for i in (1, 2)]
         va = [_slope(frames[after], det[after, i]) for i in (1, 2)]
-        jumps.append((f, float(np.hypot(va[0] - vb[0], va[1] - vb[1])), vb[1], va[1]))
+        jumps.append((f, float(np.hypot(va[0] - vb[0], va[1] - vb[1])), vb[1], va[1],
+                      float(np.hypot(vb[0], vb[1]))))
     return jumps
 
 
@@ -149,10 +165,16 @@ def find_contacts(det, fps, coverage=TOSS_COVERAGE):
     jumps = sorted(velocity_jumps(det, half_window), key=lambda j: -j[1])
 
     contacts, seen = [], []
-    for frame, jump, vy_before, vy_after in jumps:
+    for frame, jump, vy_before, vy_after, speed_before in jumps:
         if jump < MIN_JUMP_PX:
             break
-        if jump < MIN_JUMP_RATIO * abs(vy_before):
+        # The change must be large compared with how fast the ball was already
+        # moving, in any direction. Comparing with vertical speed alone works
+        # from behind, where a falling toss moves only vertically. Seen from
+        # the side, a ball in flight crosses the image at 10+ px/frame while
+        # drag slows it by about 1 px/frame over the two windows, and that
+        # steady slowing would pass as a "jump".
+        if jump < MIN_JUMP_RATIO * speed_before:
             continue
         if any(abs(frame - s) <= 2 * half_window for s in seen):
             continue
@@ -180,7 +202,7 @@ def find_contacts_with_evidence(det, fps):
     return sorted(found)
 
 
-def blob_candidates(video, ref_frame, first, last, roi, seed_frames):
+def blob_candidates(video, ref_frame, first, last, roi, seed_frames, camera="handheld"):
     """Small bright moving blobs, in the stabilised pixels of ref_frame.
 
     Returns rows of (frame, x, y, height) and the camera motion, which also
@@ -189,7 +211,14 @@ def blob_candidates(video, ref_frame, first, last, roi, seed_frames):
     previous position.
     """
     frames = list(range(first - DIFF_GAP_FRAMES, last + DIFF_GAP_FRAMES + 1))
-    motion = estimate_camera_motion(video, ref_frame, frames + seed_frames)
+    if camera == "tripod":
+        # A fixed camera needs no stabilising: every frame already lines up
+        # with every other. Skipping the feature matching is not only faster.
+        # Matching can fail outright on a scene with little texture, and any
+        # small error it makes would be added to a picture that had none.
+        motion = {f: (np.eye(3), 0) for f in frames + seed_frames}
+    else:
+        motion = estimate_camera_motion(video, ref_frame, frames + seed_frames)
     x0, y0, x1, y1 = roi
 
     cap = cv2.VideoCapture(str(video))
@@ -234,7 +263,10 @@ def fit_descent(seed, candidates, max_gap):
         # The ball's sideways drift is small and poorly known from the seed, so
         # x gets a looser limit than y, especially across gaps behind the net.
         y_tolerance = LINE_TOLERANCE_PX + 0.05 * gap
-        x_tolerance = LINE_TOLERANCE_PX + 0.6 * gap
+        # A fast-moving ball is also slowing down (drag), so a straight line
+        # through its recent positions runs slightly ahead of it. The allowance
+        # for that grows with sideways speed and vanishes for a slow ball.
+        x_tolerance = LINE_TOLERANCE_PX + 0.6 * gap + 0.7 * abs(fx[0])
         if 0 < gap <= max_gap and (abs(np.polyval(fx, row[0]) - row[1]) < x_tolerance
                                    and abs(np.polyval(fy, row[0]) - row[2]) < y_tolerance):
             points = np.vstack([points, row[:3]])
@@ -254,10 +286,29 @@ def fit_ascent(candidates, descent_end, fit_x, fit_y, min_span):
 
     Meeting it matters: other things move upward in the image, and without this
     the search happily returns one of them. Exhaustive pair search.
+
+    Nothing here assumes a viewing direction. The ball's sideways image speed
+    on the way down (vx_down) sets what is expected on the way up: a bounce
+    keeps most of it. From behind vx_down is near zero and the limits reduce
+    to "barely moves sideways". From the side it is 10+ px/frame, and the
+    search area, the speed limits and the tolerances all stretch along the
+    direction of travel to match.
     """
     end_frame = descent_end[0]
+    vx_down, vy_down = fit_x[0], fit_y[0]
+    travel = vx_down * ASCENT_SEARCH_FRAMES
+    offset = candidates[:, 1] - descent_end[1]
     pts = candidates[(candidates[:, 0] > end_frame - MEET_BEFORE_FRAMES)
-                     & (np.abs(candidates[:, 1] - descent_end[1]) < ASCENT_SEARCH_PX)]
+                     & (offset > min(0.0, travel) - ASCENT_SEARCH_PX)
+                     & (offset < max(0.0, travel) + ASCENT_SEARCH_PX)]
+    expected_vx = REBOUND_KEEPS_SIDEWAYS * vx_down
+    vx_slack = 3.0 + 0.35 * abs(vx_down)
+    fastest_rise = max(4.0, 1.2 * abs(vy_down))     # cannot rebound faster than it fell
+    # Fast sideways motion is not quite a straight line in time (drag), and a
+    # one-frame timing error moves the ball by its speed. Both tolerances grow
+    # with speed and collapse to the fixed values when the ball moves slowly.
+    x_tolerance = LINE_TOLERANCE_PX + 0.5 * abs(vx_down)
+    meet_tolerance = MEET_TOLERANCE_PX + 1.5 * abs(vx_down)
     best = None
     for i in range(len(pts)):
         for j in range(i + 1, len(pts)):
@@ -266,18 +317,18 @@ def fit_ascent(candidates, descent_end, fit_x, fit_y, min_span):
                 continue
             vy = (pts[j, 2] - pts[i, 2]) / span
             vx = (pts[j, 1] - pts[i, 1]) / span
-            if not -4.0 < vy < -0.3 or abs(vx) > 3.0:
+            if not -fastest_rise < vy < -0.3 or abs(vx - expected_vx) > vx_slack:
                 continue
             # Where this line crosses the descent, in time and across the image.
             meet = (pts[i, 2] - vy * pts[i, 0] - fit_y[1]) / (fit_y[0] - vy)
             if not end_frame - MEET_BEFORE_FRAMES <= meet <= end_frame + MEET_AFTER_FRAMES:
                 continue
             x_gap = pts[i, 1] + vx * (meet - pts[i, 0]) - np.polyval(fit_x, meet)
-            if abs(x_gap) > MEET_TOLERANCE_PX:
+            if abs(x_gap) > meet_tolerance:
                 continue
             dt = pts[:, 0] - pts[i, 0]
             near = (np.abs(pts[i, 2] + vy * dt - pts[:, 2]) < LINE_TOLERANCE_PX) & \
-                   (np.abs(pts[i, 1] + vx * dt - pts[:, 1]) < LINE_TOLERANCE_PX)
+                   (np.abs(pts[i, 1] + vx * dt - pts[:, 1]) < x_tolerance)
             if best is None or near.sum() > best.sum():
                 best = near
     if best is None:
@@ -309,8 +360,12 @@ def bounce_from_track(flight, fps):
             "source": "track, box centre"}
 
 
-def find_bounce(det, contact, video, fps):
-    """Returns (bounce dict, None) or (None, reason it was not found)."""
+def find_bounce(det, contact, video, fps, camera="handheld"):
+    """Returns (bounce dict, None) or (None, reason it was not found).
+
+    camera: "handheld" stabilises the frames before differencing them;
+    "tripod" uses them as they are.
+    """
     flight = det[(det[:, 0] > contact) & (det[:, 0] <= contact + MAX_FLIGHT_S * fps)]
     if len(flight) < MIN_LINE_POINTS:
         return None, "too few detections after contact"
@@ -330,11 +385,17 @@ def find_bounce(det, contact, video, fps):
 
     first = ref + 1
     last = int(contact + MAX_FLIGHT_S * fps)
-    roi = (max(int(last_x - 130), 0), max(int(last_y - 50), 0),
-           int(last_x + 130), int(last_y + 190))
     seed = flight[-min(30, len(flight)):]
+    # The search box. Vertically the ball can only fall as far as the court,
+    # so the box extends a fixed distance below the last detection. Sideways
+    # it must reach wherever the ball is still going: from the side a ball
+    # crosses hundreds of pixels between its last detection and its bounce.
+    vx_seed = _slope(seed[:, 0], seed[:, 1]) if len(seed) >= 3 else 0.0
+    reach = vx_seed * min(last - ref, ROI_LOOKAHEAD_S * fps)
+    roi = (max(int(last_x - 130 + min(0.0, reach)), 0), max(int(last_y - 50), 0),
+           int(last_x + 130 + max(0.0, reach)), int(last_y + 190))
     candidates, motion = blob_candidates(video, ref, first, last, roi,
-                                         [int(f) for f in seed[:, 0]])
+                                         [int(f) for f in seed[:, 0]], camera)
     if not len(candidates):
         return None, "no moving blobs found near the end of the track"
 
@@ -382,6 +443,9 @@ def main():
     p.add_argument("--track", required=True, type=Path)
     p.add_argument("--video", required=True, type=Path)
     p.add_argument("--out", required=True, type=Path)
+    p.add_argument("--camera", choices=("handheld", "tripod"), default="handheld",
+                   help="tripod skips frame stabilisation in the bounce search "
+                        "(default handheld)")
     args = p.parse_args()
 
     if not args.track.is_file():
@@ -398,7 +462,7 @@ def main():
 
     serves = []
     for contact, evidence in contacts:
-        bounce, reason = find_bounce(det, contact, args.video, fps)
+        bounce, reason = find_bounce(det, contact, args.video, fps, args.camera)
         serves.append({"contact_frame": contact, "contact_evidence": evidence,
                        "bounce": bounce, "no_bounce_reason": reason})
         if bounce:
