@@ -17,6 +17,9 @@ or marked by hand.
       |  4. fit_trajectory  fit the 3D flight, read off the launch speed
       v
     serveN/trajectory_report.txt, plots, and serves_summary.txt for the clip
+      |  5. serve_mechanics (optional, with --pose_weights)
+      v
+    serveN/mechanics_report.txt: jump, leg loading, reach, toss
 
 Each stage writes a file, and a stage whose file already exists is skipped
 unless --redo is given. Step 1 is the slow one (the detector runs on every
@@ -45,6 +48,7 @@ from pathlib import Path
 import cv2
 
 import fit_trajectory
+import serve_mechanics
 from calibrate_court import (FAR_SERVICE_Y, NET_Y, SERVICE_D, draw_court,
                              load_calibration, read_frame)
 from detect_court import detect_court
@@ -91,7 +95,7 @@ def stage_events(args, track_path, events_path, fps):
     detections = load_detections(track_path)
     serves = []
     for contact, evidence in find_contacts_with_evidence(detections, fps):
-        bounce, reason = find_bounce(detections, contact, args.video, fps)
+        bounce, reason = find_bounce(detections, contact, args.video, fps, args.camera)
         serves.append({"contact_frame": contact, "contact_evidence": evidence,
                        "bounce": bounce, "no_bounce_reason": reason})
     events_path.write_text(json.dumps({"fps": fps, "serves": serves}, indent=2))
@@ -162,11 +166,28 @@ def stage_fit(args, index, calibration, events_path):
     return fit_trajectory.main(argv)
 
 
+def stage_mechanics(args, index, calibration):
+    """Optional: body mechanics for one serve. Returns a one-line outcome."""
+    serve_dir = args.out_dir / f"serve{index}"
+    argv = ["--video", str(args.video), "--camera", args.camera,
+            "--track", str(args.out_dir / "track.csv"),
+            "--calibration", str(calibration),
+            "--trajectory", str(serve_dir / "trajectory.json"),
+            "--pose_weights", str(args.pose_weights), "--out_dir", str(serve_dir)]
+    try:
+        serve_mechanics.main(argv)
+    except SystemExit as failure:
+        return " ".join(str(failure).split())
+    return f"written to {serve_dir / 'mechanics_report.txt'}"
+
+
 def summary_table(rows):
     """Plain-text table of every serve, including the ones that failed."""
     header = (f"{'Serve':<6}{'Contact':>8}  {'Launch speed':<19}{'Contact ht':<12}"
               f"{'Net clearance':<15}{'Landing':<28}Notes")
     lines = [header, "-" * len(header)]
+    mechanics = [f"Serve {row['serve']} mechanics: {row['mechanics']}"
+                 for row in rows if "mechanics" in row]
     for row in rows:
         if "error" in row:
             lines.append(f"{row['serve']:<6}{row['contact_frame']:>8}  "
@@ -186,6 +207,8 @@ def summary_table(rows):
             f"{sig['launch_speed_ms'] * MS_TO_KMH:<3.0f} km/h   "
             f"{s['contact_height_m']:.2f} m      {clearance:<15}{landing:<28}"
             f"{'; '.join(notes)}")
+    if mechanics:
+        lines += [""] + mechanics
     return "\n".join(lines) + "\n"
 
 
@@ -203,6 +226,10 @@ def main():
     p.add_argument("--conf", type=float, default=0.15)
     p.add_argument("--mc", type=int, default=100,
                    help="Monte Carlo repeats per serve for the uncertainty")
+    p.add_argument("--pose_weights", type=Path,
+                   help="Pose model (for example weights\\yolov8s-pose.pt, downloaded "
+                        "on first use). If given, serve mechanics are measured for "
+                        "every serve that has a trajectory fit")
     p.add_argument("--overlay_video", action="store_true",
                    help="Also write tracked.mp4 when tracking runs")
     p.add_argument("--redo", nargs="*", default=[],
@@ -259,6 +286,10 @@ def main():
                    anchored=results["anchored"],
                    service_line_margin_m=(FAR_SERVICE_Y - landing_y if landing_y > NET_Y
                                           else landing_y - SERVICE_D))
+        if args.pose_weights:
+            print(f"[5/5] Serve {index + 1}: body mechanics ...")
+            row["mechanics"] = stage_mechanics(args, index, calibration)
+            print(f"      {row['mechanics']}")
         rows.append(row)
 
     table = summary_table(rows)
