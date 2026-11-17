@@ -7,9 +7,9 @@ single smartphone video. One command, nothing marked by hand.
 
 ![Fitted 3D flight of a serve, side view and top view](assets/trajectory_views.png)
 
-*Top: the tracked ball path and bounce on one serve. Bottom: a 94 km/h slice serve
-reconstructed in 3D from the same handheld clip. The sideways curve in the top view is
-the spin.*
+*The same serve twice. Top: the tracked ball path and detected bounce, from one handheld
+phone clip. Bottom: its flight reconstructed in 3D, landing by the T. The
+sideways curve in the top view is the spin.*
 
 ## How it works
 
