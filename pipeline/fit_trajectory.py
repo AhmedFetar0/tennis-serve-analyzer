@@ -94,6 +94,12 @@ NET_HEIGHT_CENTRE_M = 0.914
 NET_HEIGHT_POST_M = 1.07
 NET_POST_OUTSIDE_M = 0.914      # posts stand this far outside the doubles line
 
+# Without a bounce the vertical spin force cannot be measured and is taken as
+# zero. This is how wrong that could be (1-sigma). The serves measured with a
+# bounce so far gave cl_up between +0.01 and +0.04, and hiding their bounce
+# made the launch speed read 4% to 16% high, so this term is not small.
+UNANCHORED_CL_UP_SIGMA = 0.04
+
 # A fit is refused, not reported, if it lands outside these. Wide enough for
 # any real serve; narrow enough to catch a fit that has locked onto nonsense.
 CONTACT_HEIGHT_LIMITS_M = (1.5, 3.6)
@@ -128,6 +134,7 @@ class FitSettings:
     bounce_z_sigma: float = 0.03     # metres; covers +/- 1 frame of bounce timing
     outlier_scale: float = 3.0       # in sigmas; beyond this a detection loses weight
     fit_cl_up: bool = None           # None = only when a bounce anchors the fit
+    cl_up_value: float = 0.0         # value cl_up is held at when it is not fitted
 
 
 @dataclass
@@ -285,6 +292,8 @@ def fit_flight(pose: CameraPose, obs: FlightObservations, settings: FitSettings 
 
     starts = [np.asarray(start, dtype=float)] if start is not None \
         else _starting_points(pose, obs)
+    if not fit_cl_up:
+        starts = [np.r_[s[:7], settings.cl_up_value] for s in starts]
 
     # Pass 1 uses a nominal pixel error. Pass 2 uses the error actually seen
     # in the residuals, so the detections and the bounce anchor are weighed
@@ -797,11 +806,29 @@ def main(argv=None):
             calib, pose, obs, fit, settings, fps, args.mc,
             np.random.default_rng(args.seed), click_sigma_px=max(calib.rms_px, 1.5),
             frame_sigma=args.frame_sigma, cd_sigma=args.cd_sigma)
-    sigma = {k: math.hypot(sigma_fit.get(k, 0.0), sigma_mc.get(k, 0.0)) for k in summary}
+    sigma_spin = {}
+    if not anchored:
+        # Refit with the vertical spin force held one sigma either side of
+        # zero. Half the difference is the uncertainty this assumption adds.
+        shifted = []
+        for value in (UNANCHORED_CL_UP_SIGMA, -UNANCHORED_CL_UP_SIGMA):
+            other = fit_flight(pose, obs, FitSettings(
+                settings.cd, fit.px_sigma, settings.bounce_px_sigma,
+                settings.bounce_z_sigma, settings.outlier_scale, False, value),
+                start=fit.params)
+            try:
+                shifted.append(derive(other.params, other.cd, None, fps)[0])
+            except ValueError:
+                pass
+        if len(shifted) == 2:
+            sigma_spin = {k: abs(shifted[0][k] - shifted[1][k]) / 2
+                          for k in summary if k in shifted[0] and k in shifted[1]}
+    sigma = {k: math.sqrt(sigma_fit.get(k, 0.0) ** 2 + sigma_mc.get(k, 0.0) ** 2
+                          + sigma_spin.get(k, 0.0) ** 2) for k in summary}
 
     report = build_report(args, calib, pose, obs, fit, summary, sigma, sigma_fit,
                           sigma_mc, mc_used, event_source, contact_frame, bounce_frame,
-                          fps, motion, stabilisation)
+                          fps, motion, stabilisation, sigma_spin)
     print(report)
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -812,6 +839,7 @@ def main(argv=None):
         "parameters": dict(zip(PARAM_NAMES, map(float, fit.params))),
         "cd": fit.cd, "summary": summary, "sigma": sigma,
         "sigma_fit_only": sigma_fit, "sigma_inputs_only": sigma_mc,
+        "sigma_unknown_vertical_spin": sigma_spin,
         "pixel_noise_px": fit.px_sigma,
         "detections_used": int(fit.inliers.sum()),
         "detections_rejected": [int(f) for f in obs.frames[~fit.inliers]],
@@ -839,7 +867,7 @@ def main(argv=None):
 
 def build_report(args, calib, pose, obs, fit, summary, sigma, sigma_fit, sigma_mc,
                  mc_used, event_source, contact_frame, bounce_frame, fps, motion,
-                 stabilisation=None):
+                 stabilisation=None, sigma_spin=None):
     def speeds(key):
         v, s = summary[key], sigma[key]
         return (f"{v * MS_TO_KMH:.0f} +/- {s * MS_TO_KMH:.0f} km/h "
@@ -923,6 +951,10 @@ def build_report(args, calib, pose, obs, fit, summary, sigma, sigma_fit, sigma_m
                      "bounce, drag)")
     else:
         lines.append("  from the inputs:       not evaluated (--mc 0)")
+    if sigma_spin:
+        lines.append(f"  from unknown topspin:  +/- "
+                     f"{sigma_spin['launch_speed_ms'] * MS_TO_KMH:.1f} km/h "
+                     f"(vertical spin force assumed 0 +/- {UNANCHORED_CL_UP_SIGMA})")
 
     if args.contact_ground_px:
         ground_frame = args.contact_ground_frame or contact_frame
